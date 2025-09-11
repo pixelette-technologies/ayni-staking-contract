@@ -4,10 +4,10 @@ require("dotenv").config();
 async function main() {
     console.log("🚀 Starting process...");
 
-    const stakingAddress = "0xe16fD7e97fe3dacD0227475cC8F6d677825370e9"; // replace this with the current deployed address
+    const stakingAddress = "0x867267c3095b885A95b3Dba5BA18a1566D3994bb"; // replace this with the current deployed address
     const provider = new ethers.JsonRpcProvider("process.env.BSC_MAINNET_RPC_URL"); //replace this with the current rpc url
 
-    const backendSigner = new ethers.Wallet(process.env.CURREENT_SIGNER, provider); // replace this with verified signer the wallet who will sign the message
+    const backendSigner = new ethers.Wallet(process.env.CURRENT_SIGNER, provider); // replace this with verified signer the wallet who will sign the message
 
     console.log("📌 Backend Signer:", backendSigner.address);
     // console.log("📌 User Signer:", userSigner.address);
@@ -16,11 +16,12 @@ async function main() {
     const feeTokens = ethers.parseEther("1"); // 0.1 Tokens
     const sourceAddress = "0x07d3bdA43236b6A6C8079d49dd2c8839Ec4a811F"
     const stakeId = "1";
-    const intervalId = "1";
+    const interval = "1";
 
-    const userId = ethers.keccak256(ethers.toUtf8Bytes(0x07d3bdA43236b6A6C8079d49dd2c8839Ec4a811F + Math.random().toString()));
+    const userId = ethers.keccak256(ethers.toUtf8Bytes(0x07d3bdA43236b6A6C8079d49dd2c8839Ec811F + Math.random().toString()));
     const salt = ethers.keccak256(ethers.toUtf8Bytes("salt-" + Math.random().toString()));
-    const endTime = "1754901095"; // 1 hour = 3600 seconds
+    const endTime = "1757113467";
+    const expiry = Math.floor(Date.now() / 1000) + 24 * 60 * 60;
 
     const domain = {
         name: "AyniStaking",
@@ -33,16 +34,17 @@ async function main() {
         StakeVirtual: [
             { name: "sourceAddress", type: "address" },
             { name: "stakeId", type: "uint256" },
-            { name: "intervalId", type: "uint256" },
+            { name: "interval", type: "uint256" },
             { name: "endTime", type: "uint256" },
             { name: "amount", type: "uint256" },
             { name: "feeTokens", type: "uint256" },
+            { name: "expiry", type: "uint256" },
             { name: "userId", type: "bytes32" },
             { name: "salt", type: "bytes32" },
         ]
     };
 
-    const stakeData = { sourceAddress, stakeId, intervalId, endTime, amount, feeTokens, userId, salt };
+    const stakeData = { sourceAddress, stakeId, interval, endTime, amount, feeTokens, expiry, userId, salt };
     console.log("🚀 ~ main ~ stakeData:", stakeData);
 
 
@@ -57,13 +59,13 @@ async function main() {
     }
 
     const encodedData = ethers.AbiCoder.defaultAbiCoder().encode(
-        ["uint256", "uint256", "uint256", "uint256", "uint256", "bytes32", "bytes32"],
-        [stakeId, intervalId, endTime, amount, feeTokens, userId, salt]
+        ["uint256", "uint256", "uint256", "uint256", "uint256", "uint256", "bytes32", "bytes32"],
+        [stakeId, interval, endTime, amount, feeTokens, expiry, userId, salt]
     )
     console.log("Encoded Data:", encodedData);
 
     const decoded = ethers.AbiCoder.defaultAbiCoder().decode(
-        ["uint256", "uint256", "uint256", "uint256", "uint256", "bytes32", "bytes32"],
+        ["uint256", "uint256", "uint256", "uint256", "uint256", "uint256", "bytes32", "bytes32"],
         encodedData
     );
     console.log("Decoded Interval:", decoded[1].toString());

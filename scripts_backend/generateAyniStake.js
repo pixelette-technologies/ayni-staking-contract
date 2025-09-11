@@ -4,10 +4,10 @@ require("dotenv").config();
 async function main() {
     console.log("🚀 Starting process...");
 
-    const stakingAddress = "0x6c816f8d60faA82b05D80D4334AbA842D9291c10"; // replace this with the current deployed address
+    const stakingAddress = "0xC8570F03FB60beDF8a6e518235eDA204D93E7196"; // replace this with the current deployed address
     const provider = new ethers.JsonRpcProvider(process.env.BSC_MAINNET_RPC_URL); //replace this with the current rpc url
 
-    const backendSigner = new ethers.Wallet(process.env.CURREENT_SIGNER, provider); // replace this with verified signer the wallet who will sign the message
+    const backendSigner = new ethers.Wallet(process.env.CURRENT_SIGNER, provider); // replace this with verified signer the wallet who will sign the message
     // const userSigner = new ethers.Wallet(process.env.USER_KEY, provider); // User wallet address in case directly intercating through the script
 
     console.log("📌 Backend Signer:", backendSigner.address);
@@ -17,8 +17,10 @@ async function main() {
     const destinationAddress = "0x07d3bdA43236b6A6C8079d49dd2c8839Ec4a811F"
     const sourceAddress = "0x07d3bdA43236b6A6C8079d49dd2c8839Ec4a811F"
 
-    let currentStakeId = 0;
-    let currentIntervalId = 0;
+    let currentStakeId = 3;
+    let currentIntervalId = 1;
+    const expiry = Math.floor(Date.now() / 1000) + 24 * 60 * 60;
+
 
     function getNextStakeId() {
         currentStakeId += 3;
@@ -26,15 +28,17 @@ async function main() {
     }
 
     function getNextIntervalId() {
-        currentIntervalId += 3;
+        currentIntervalId += 0;
         return currentIntervalId.toString();
     }
     const stakeId = getNextStakeId();
-    const intervalId = getNextIntervalId();
+    console.log("🚀 ~ main ~ stakeId:", stakeId);
+    const interval= getNextIntervalId();
+    console.log("🚀 ~ main ~ intervalId:", interval);
 
     const userId = ethers.keccak256(ethers.toUtf8Bytes(0x07d3bdA43236b6A6C8079d49dd2c8839Ec4a811F + Math.random().toString()));
     const salt = ethers.keccak256(ethers.toUtf8Bytes("salt-" + Math.random().toString()));
-    const endTime = "1754901095";
+    const endTime = "1757113467";
 
     const domain = {
         name: "AyniStaking",
@@ -48,15 +52,16 @@ async function main() {
             { name: "destinationAddress", type: "address" },
             { name: "sourceAddress", type: "address" },
             { name: "stakeId", type: "uint256" },
-            { name: "intervalId", type: "uint256" },
+            { name: "interval", type: "uint256" },
             { name: "endTime", type: "uint256" },
             { name: "amount", type: "uint256" },
+            { name: "expiry", type: "uint256" },
             { name: "userId", type: "bytes32" },
             { name: "salt", type: "bytes32" },
         ]
     };
 
-    const stakeData = { destinationAddress, sourceAddress, stakeId, intervalId, endTime, amount, userId, salt };
+    const stakeData = { destinationAddress, sourceAddress, stakeId, interval, endTime, amount, expiry, userId, salt };
     console.log("🚀 ~ main ~ stakeData:", stakeData);
 
 
@@ -71,20 +76,20 @@ async function main() {
     }
 
     const encodedData = ethers.AbiCoder.defaultAbiCoder().encode(
-        ["address", "uint256", "uint256", "uint256", "uint256", "bytes32", "bytes32"],
-        [destinationAddress, stakeId, endTime, intervalId, amount, userId, salt]
+        ["address", "uint256", "uint256", "uint256", "uint256", "uint256", "bytes32", "bytes32"],
+        [destinationAddress, stakeId, endTime, interval, amount, expiry, userId, salt]
     );
 
     console.log("Encoded Data:", encodedData);
 
     const decoded = ethers.AbiCoder.defaultAbiCoder().decode(
-        ["address", "uint256", "uint256", "uint256", "uint256", "bytes32", "bytes32"],
+        ["address", "uint256", "uint256", "uint256", "uint256", "uint256", "bytes32", "bytes32"],
         encodedData
     );
     console.log("Decoded stakeid:", decoded[1].toString());
     console.log("Decoded destinationAddress:", decoded[0].toString());
     console.log("Decoded endtime:", decoded[2].toString());
-    console.log("Decoded intervalid:", decoded[3].toString());
+    console.log("Decoded interval:", decoded[3].toString());
     console.log("Decoded amount:", decoded[4].toString());
     console.log("Decoded userid:", decoded[5].toString());
 }

@@ -36,17 +36,17 @@ contract AyniStaking is
 
     bytes32 private constant STAKEEXTERNAL_TYPEHASH =
         keccak256(
-            "StakeExternal(address destinationAddress,address sourceAddress,uint256 stakeId,uint256 intervalId,uint256 endTime,uint256 amount,bytes32 userId,bytes32 salt)"
+            "StakeExternal(address destinationAddress,address sourceAddress,uint256 stakeId,uint256 interval,uint256 endTime,uint256 amount,uint256 expiry,bytes32 userId,bytes32 salt)"
         );
 
     bytes32 private constant STAKEVIRTUAL_TYPEHASH =
         keccak256(
-            "StakeVirtual(address sourceAddress,uint256 stakeId,uint256 intervalId,uint256 endTime,uint256 amount,uint256 feeTokens,bytes32 userId,bytes32 salt)"
+            "StakeVirtual(address sourceAddress,uint256 stakeId,uint256 interval,uint256 endTime,uint256 amount,uint256 feeTokens,uint256 expiry,bytes32 userId,bytes32 salt)"
         );
 
     bytes32 private constant CLAIM_TYPEHASH =
         keccak256(
-            "Claim(address destinationAddress,uint256 stakeId,uint256 intervalId,uint256 rewards,uint256 claimedMonth,uint256 expiry,bytes32 salt,bytes32 userId, bytes32 nonce)"
+            "Claim(address destinationAddress,uint256 stakeId,uint256 interval,uint256 rewards,uint256 claimedMonth,uint256 expiry,bytes32 salt,bytes32 userId,bytes32 nonce)"
         );
 
     IERC20 public stakingToken;
@@ -78,7 +78,7 @@ contract AyniStaking is
         address indexed destinationAddress,
         bytes32 indexed userId,
         uint256 stakeId,
-        uint256 intervalId,
+        uint256 interval,
         uint256 amount
     );
     
@@ -86,7 +86,7 @@ contract AyniStaking is
         address indexed caller,
         bytes32 indexed userId,
         uint256 stakeId,
-        uint256 intervalId,
+        uint256 interval,
         uint256 lastPreclaimMonth,
         uint256 reward,
         uint256 principal
@@ -139,7 +139,7 @@ contract AyniStaking is
      *        - destinationAddress: A turnkey address where rewards will be claimed
      *        - stakeId: unique identifier for this stake
      *        - endTime: timestamp when the stake fully mature.
-     *        - intervalId: staking interval in months (e.g., 12 for 12 months)
+     *        - interval: staking interval in months (e.g., 12 for 12 months)
      *        - amount: amount of tokens to stake
      *        - userId: unique user identifier from backend
      *        - salt: unique salt to prevent replay
@@ -154,19 +154,20 @@ contract AyniStaking is
             address destinationAddress,
             uint256 stakeId,
             uint256 endTime,
-            uint256 intervalId,
+            uint256 interval,
             uint256 amount,
+            uint256 expiry,
             bytes32 userId,
             bytes32 salt
         ) = abi.decode(
                 _encodedData,
-                (address, uint256, uint256, uint256, uint256, bytes32, bytes32)
+                (address, uint256, uint256, uint256, uint256, uint256, bytes32, bytes32)
             ); //tartTime?
 
-        if (destinationAddress == address(0) || endTime == 0 || amount == 0)
+        if (destinationAddress == address(0) || endTime == 0 || amount == 0 || expiry == 0 || interval == 0)
             revert InvalidInput();
         if (usedSalts[salt]) revert SaltAlreadyUsed();
-        if (stakes[userId][intervalId][stakeId].isActive)
+        if (stakes[userId][interval][stakeId].isActive)
             revert AlreadyStaked();
 
         bytes32 digest = _hashTypedDataV4(
@@ -176,9 +177,10 @@ contract AyniStaking is
                     destinationAddress,
                     msg.sender,
                     stakeId,
-                    intervalId,
+                    interval,
                     endTime,
                     amount,
+                    expiry,
                     userId,
                     salt
                 )
@@ -189,8 +191,9 @@ contract AyniStaking is
 
         address signer = ECDSA.recover(digest, _signature);
         if (!isSigner[signer]) revert InvalidSigner();
+        if (expiry < block.timestamp) revert SignatureExpired();
 
-        stakes[userId][intervalId][stakeId] = Stake({
+        stakes[userId][interval][stakeId] = Stake({
             amount: amount,
             startTime: block.timestamp,
             endTime: endTime,
@@ -209,7 +212,7 @@ contract AyniStaking is
             destinationAddress,
             userId,
             stakeId,
-            intervalId,
+            interval,
             amount
         );
     }
@@ -220,7 +223,7 @@ contract AyniStaking is
      *      Prevents replay attacks using unique salts and ensures the stake does not already exist.
      * @param _encodedData ABI-encoded data containing:
      *        - stakeId: unique identifier for this stake
-     *        - intervalId: staking interval in months (e.g., 12 for 12 months)
+     *        - interval: staking interval in months (e.g., 12 for 12 months)
      *        - endTime: timestamp when the stake fully mature.
      *        - amount: amount of tokens to stake
      *        - feeTokens: amount of tokens to be deducted as gas fee
@@ -235,18 +238,19 @@ contract AyniStaking is
     ) external nonReentrant whenNotPaused {
         (
             uint256 stakeId,
-            uint256 intervalId,
+            uint256 interval,
             uint256 endTime,
             uint256 amount,
             uint256 feeTokens,
+            uint256 expiry,
             bytes32 userId,
             bytes32 salt
         ) = abi.decode(
                 _encodedData,
-                (uint256, uint256, uint256, uint256, uint256, bytes32, bytes32)
+                (uint256, uint256, uint256, uint256, uint256, uint256, bytes32, bytes32)
             ); // start time??
 
-        if (endTime == 0 || amount == 0 || feeTokens == 0) revert InvalidInput();
+        if (endTime == 0 || amount == 0 || feeTokens == 0 || interval == 0 || expiry == 0) revert InvalidInput();
         if (usedSalts[salt]) revert SaltAlreadyUsed();
 
         bytes32 digest = _hashTypedDataV4(
@@ -255,10 +259,11 @@ contract AyniStaking is
                     STAKEVIRTUAL_TYPEHASH,
                     msg.sender,
                     stakeId,
-                    intervalId,
+                    interval,
                     endTime,
                     amount,
                     feeTokens,
+                    expiry,
                     userId,
                     salt
                 )
@@ -269,10 +274,11 @@ contract AyniStaking is
 
         address signer = ECDSA.recover(digest, _signature);
         if (!isSigner[signer]) revert InvalidSigner();
+        if (expiry < block.timestamp) revert SignatureExpired();
 
-        if (stakes[userId][intervalId][stakeId].isActive) revert StakeAlreadyExists();
+        if (stakes[userId][interval][stakeId].isActive) revert StakeAlreadyExists();
 
-        stakes[userId][intervalId][stakeId] = Stake({
+        stakes[userId][interval][stakeId] = Stake({
             amount: amount,
             startTime: block.timestamp,
             endTime: endTime,
@@ -301,7 +307,7 @@ contract AyniStaking is
             msg.sender,
             userId,
             stakeId,
-            intervalId,
+            interval,
             amount
         );
     }
@@ -314,7 +320,7 @@ contract AyniStaking is
      *      Transfers preclaim rewards in `rewardToken` and returns principal if the stake is fully claimed.
      * @param _encodedData ABI-encoded data containing:
      *        - stakeId: unique identifier of the stake
-     *        - intervalId: staking interval in months (e.g., 12 for 12 months)
+     *        - interval: staking interval in months (e.g., 12 for 12 months)
      *        - rewards: amount of reward tokens to claim
      *        - claimedMonth: the month up to which the reward is being claimed
      *        - expiry: signature expiry timestamp
@@ -330,7 +336,7 @@ contract AyniStaking is
     ) external nonReentrant whenNotPaused {
         (
             uint256 stakeId,
-            uint256 intervalId,
+            uint256 interval,
             uint256 rewards,  
             uint256 claimedMonth,
             uint256 expiry,
@@ -352,7 +358,7 @@ contract AyniStaking is
                     CLAIM_TYPEHASH,
                     msg.sender,
                     stakeId,
-                    intervalId,
+                    interval,
                     rewards,
                     claimedMonth,
                     expiry,
@@ -370,19 +376,18 @@ contract AyniStaking is
         if (!isSigner[signer]) revert InvalidSigner();
         if (expiry < block.timestamp) revert SignatureExpired();
 
-        Stake storage userStake = stakes[userId][intervalId][stakeId];
+        Stake storage userStake = stakes[userId][interval][stakeId];
 
         if (userStake.claimAddress != msg.sender) revert InvalidClaimAddress();
         if (userStake.isClaimed) revert AlreadyClaimed();
         if (!userStake.isActive) revert StakeNotFound();
-        if (userStake.claimedUntilMonth + 3 >= claimedMonth) revert PreclaimNotMatured();
 
         userStake.claimedUntilMonth = claimedMonth;
         userStake.claimedAmount += rewards;
 
         rewardToken.safeTransfer(msg.sender, rewards);
 
-        if (claimedMonth >= intervalId && block.timestamp >= userStake.endTime) {
+        if (claimedMonth >= interval && block.timestamp >= userStake.endTime) {
             userStake.isClaimed = true; 
             userStake.isActive = false;
 
@@ -393,7 +398,7 @@ contract AyniStaking is
             msg.sender,
             userId,
             stakeId,
-            intervalId,
+            interval,
             claimedMonth,
             rewards,
             userStake.amount
@@ -453,6 +458,7 @@ contract AyniStaking is
     function pauseStaking() external onlyOwner {
         _pause();
     }
+    
     /**
      * @notice Unpauses the contract, allowing functions to be executed again.
      */
