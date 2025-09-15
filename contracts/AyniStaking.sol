@@ -26,8 +26,8 @@ contract AyniStaking is
         uint256 amount;
         uint256 startTime;
         uint256 endTime;
-        uint256 claimedAmount; //preClaim 
-        uint256 claimedUntilMonth; //preClaim
+        uint256 claimedAmount;
+        uint256 claimedUntilMonth;
         address staker;
         address claimAddress;
         bool isClaimed;
@@ -41,7 +41,7 @@ contract AyniStaking is
 
     bytes32 private constant STAKEVIRTUAL_TYPEHASH =
         keccak256(
-            "StakeVirtual(address sourceAddress,uint256 stakeId,uint256 interval,uint256 endTime,uint256 amount,uint256 feeTokens,uint256 expiry,bytes32 userId,bytes32 salt)"
+            "StakeVirtual(address destinationAddress,address sourceAddress,uint256 stakeId,uint256 interval,uint256 endTime,uint256 amount,uint256 feeTokens,uint256 expiry,bytes32 userId,bytes32 salt)"
         );
 
     bytes32 private constant CLAIM_TYPEHASH =
@@ -57,8 +57,8 @@ contract AyniStaking is
         public stakes;
     mapping(address => bool) public isSigner;
     mapping(bytes32 => bool) public usedSalts;
-    mapping(bytes32 => mapping(uint256 => mapping(bytes32 => bool))) public usedNonces; 
-
+    mapping(bytes32 => mapping(uint256 => mapping(bytes32 => bool)))
+        public usedNonces;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -68,8 +68,8 @@ contract AyniStaking is
     /**
      * @dev Storage gap for future upgrades
      * @custom:oz-upgrades-unsafe-allow state-variable-immutable
-     * state-variable-assignment 
-     */ 
+     * state-variable-assignment
+     */
     uint256[50] private __gap;
 
     // Events
@@ -81,7 +81,7 @@ contract AyniStaking is
         uint256 interval,
         uint256 amount
     );
-    
+
     event Claimed(
         address indexed caller,
         bytes32 indexed userId,
@@ -91,8 +91,12 @@ contract AyniStaking is
         uint256 reward,
         uint256 principal
     );
-    
-    event EmergencyWithdraw(address indexed wallet, address token , uint256 amount);
+
+    event EmergencyWithdraw(
+        address indexed wallet,
+        address token,
+        uint256 amount
+    );
 
     // Custom errors
     error InvalidSignature();
@@ -113,7 +117,11 @@ contract AyniStaking is
     error PreclaimNotMatured();
     error InsufficientBalance();
 
-    function initialize(address _stakingToken, address _rewardToken, address _feeCollector) public initializer {
+    function initialize(
+        address _stakingToken,
+        address _rewardToken,
+        address _feeCollector
+    ) public initializer {
         if (
             _stakingToken == address(0) ||
             _rewardToken == address(0) ||
@@ -127,7 +135,7 @@ contract AyniStaking is
         __EIP712_init("AyniStaking", "1");
 
         stakingToken = IERC20(_stakingToken);
-        rewardToken  = IERC20(_rewardToken);
+        rewardToken = IERC20(_rewardToken);
         feeCollector = _feeCollector;
     }
 
@@ -161,14 +169,27 @@ contract AyniStaking is
             bytes32 salt
         ) = abi.decode(
                 _encodedData,
-                (address, uint256, uint256, uint256, uint256, uint256, bytes32, bytes32)
-            ); //tartTime?
+                (
+                    address,
+                    uint256,
+                    uint256,
+                    uint256,
+                    uint256,
+                    uint256,
+                    bytes32,
+                    bytes32
+                )
+            );
 
-        if (destinationAddress == address(0) || endTime == 0 || amount == 0 || expiry == 0 || interval == 0)
-            revert InvalidInput();
+        if (
+            destinationAddress == address(0) ||
+            endTime == 0 ||
+            amount == 0 ||
+            expiry == 0 ||
+            interval == 0
+        ) revert InvalidInput();
         if (usedSalts[salt]) revert SaltAlreadyUsed();
-        if (stakes[userId][interval][stakeId].isActive)
-            revert AlreadyStaked();
+        if (stakes[userId][interval][stakeId].isActive) revert AlreadyStaked();
 
         bytes32 digest = _hashTypedDataV4(
             keccak256(
@@ -197,8 +218,8 @@ contract AyniStaking is
             amount: amount,
             startTime: block.timestamp,
             endTime: endTime,
-            claimedAmount: 0, //preclaim change
-            claimedUntilMonth: 0, //preclaim change
+            claimedAmount: 0,
+            claimedUntilMonth: 0,
             staker: msg.sender,
             claimAddress: destinationAddress,
             isClaimed: false,
@@ -222,6 +243,8 @@ contract AyniStaking is
      * @dev Uses EIP712 typed data signatures to verify off-chain authorization.
      *      Prevents replay attacks using unique salts and ensures the stake does not already exist.
      * @param _encodedData ABI-encoded data containing:
+     *        - destinationAddress: A turnkey address where rewards will be claimed
+     *        - sourceAddress: address from which tokens will be staked
      *        - stakeId: unique identifier for this stake
      *        - interval: staking interval in months (e.g., 12 for 12 months)
      *        - endTime: timestamp when the stake fully mature.
@@ -237,6 +260,8 @@ contract AyniStaking is
         bytes memory _signature
     ) external nonReentrant whenNotPaused {
         (
+            address destinationAddress,
+            address sourceAddress,
             uint256 stakeId,
             uint256 interval,
             uint256 endTime,
@@ -247,17 +272,36 @@ contract AyniStaking is
             bytes32 salt
         ) = abi.decode(
                 _encodedData,
-                (uint256, uint256, uint256, uint256, uint256, uint256, bytes32, bytes32)
-            ); // start time??
+                (
+                    address,
+                    address,
+                    uint256,
+                    uint256,
+                    uint256,
+                    uint256,
+                    uint256,
+                    uint256,
+                    bytes32,
+                    bytes32
+                )
+            );
 
-        if (endTime == 0 || amount == 0 || feeTokens == 0 || interval == 0 || expiry == 0) revert InvalidInput();
+        if (
+            destinationAddress == address(0) ||
+            sourceAddress == address(0) ||
+            amount == 0 ||
+            feeTokens == 0 ||
+            interval == 0 ||
+            expiry == 0
+        ) revert InvalidInput();
         if (usedSalts[salt]) revert SaltAlreadyUsed();
 
         bytes32 digest = _hashTypedDataV4(
             keccak256(
                 abi.encode(
                     STAKEVIRTUAL_TYPEHASH,
-                    msg.sender,
+                    destinationAddress,
+                    sourceAddress,
                     stakeId,
                     interval,
                     endTime,
@@ -276,47 +320,39 @@ contract AyniStaking is
         if (!isSigner[signer]) revert InvalidSigner();
         if (expiry < block.timestamp) revert SignatureExpired();
 
-        if (stakes[userId][interval][stakeId].isActive) revert StakeAlreadyExists();
+        if (stakes[userId][interval][stakeId].isActive)
+            revert StakeAlreadyExists();
 
         stakes[userId][interval][stakeId] = Stake({
             amount: amount,
             startTime: block.timestamp,
             endTime: endTime,
-            staker: msg.sender,
+            staker: sourceAddress,
             claimedAmount: 0,
             claimedUntilMonth: 0,
-            claimAddress: msg.sender,
+            claimAddress: destinationAddress,
             isClaimed: false,
             isActive: true
         });
 
-        stakingToken.safeTransferFrom(
-            msg.sender,
-            feeCollector,
-            feeTokens
-        );
+        stakingToken.safeTransferFrom(sourceAddress, feeCollector, feeTokens);
 
-        stakingToken.safeTransferFrom(
-            msg.sender,
-            address(this),
-            amount
-        );
+        stakingToken.safeTransferFrom(sourceAddress, address(this), amount);
 
         emit Staked(
-            msg.sender,
-            msg.sender,
+            sourceAddress,
+            destinationAddress,
             userId,
             stakeId,
             interval,
             amount
         );
     }
-    
+
     /**
      * @notice Allows a user to claim their staking rewards for a specific stake via destinationAddress.
      * @dev Verifies backend-generated EIP712 signature to ensure authorized claims.
      *      Uses salts and nonces to prevent replay attacks.
-     *      Enforces a minimum 3-month gap between claims.
      *      Transfers preclaim rewards in `rewardToken` and returns principal if the stake is fully claimed.
      * @param _encodedData ABI-encoded data containing:
      *        - stakeId: unique identifier of the stake
@@ -335,9 +371,10 @@ contract AyniStaking is
         bytes memory _signature
     ) external nonReentrant whenNotPaused {
         (
+            address destinationAddress,
             uint256 stakeId,
             uint256 interval,
-            uint256 rewards,  
+            uint256 rewards,
             uint256 claimedMonth,
             uint256 expiry,
             bytes32 userId,
@@ -345,10 +382,21 @@ contract AyniStaking is
             bytes32 nonce
         ) = abi.decode(
                 _encodedData,
-                (uint256, uint256, uint256, uint256, uint256, bytes32, bytes32, bytes32)
+                (
+                    address,
+                    uint256,
+                    uint256,
+                    uint256,
+                    uint256,
+                    uint256,
+                    bytes32,
+                    bytes32,
+                    bytes32
+                )
             ); //should there be addresses sent from backnemd at the time of claim
 
-        if (rewards == 0 || expiry == 0 || claimedMonth == 0) revert InvalidInput();
+        if (rewards == 0 || expiry == 0 || claimedMonth == 0)
+            revert InvalidInput();
         if (usedSalts[salt]) revert SaltAlreadyUsed();
         if (usedNonces[userId][stakeId][nonce]) revert NonceAlreadyUsed();
 
@@ -356,7 +404,7 @@ contract AyniStaking is
             keccak256(
                 abi.encode(
                     CLAIM_TYPEHASH,
-                    msg.sender,
+                    destinationAddress,
                     stakeId,
                     interval,
                     rewards,
@@ -378,24 +426,25 @@ contract AyniStaking is
 
         Stake storage userStake = stakes[userId][interval][stakeId];
 
-        if (userStake.claimAddress != msg.sender) revert InvalidClaimAddress();
+        if (userStake.claimAddress != destinationAddress)
+            revert InvalidClaimAddress();
         if (userStake.isClaimed) revert AlreadyClaimed();
         if (!userStake.isActive) revert StakeNotFound();
 
         userStake.claimedUntilMonth = claimedMonth;
         userStake.claimedAmount += rewards;
 
-        rewardToken.safeTransfer(msg.sender, rewards);
+        rewardToken.safeTransfer(destinationAddress, rewards);
 
         if (claimedMonth >= interval && block.timestamp >= userStake.endTime) {
-            userStake.isClaimed = true; 
+            userStake.isClaimed = true;
             userStake.isActive = false;
 
             stakingToken.safeTransfer(userStake.staker, userStake.amount);
         }
 
         emit Claimed(
-            msg.sender,
+            destinationAddress,
             userId,
             stakeId,
             interval,
@@ -436,7 +485,7 @@ contract AyniStaking is
         if (_feeCollector == address(0)) revert InvalidInput();
         feeCollector = _feeCollector;
     }
-      
+
     /**
      * @notice Withdraws tokens from the contract in case of emergency.
      * @dev Only callable by the contract owner.
@@ -444,9 +493,15 @@ contract AyniStaking is
      * @param _amount Amount of tokens to withdraw.
      * @param _token Address of the token to withdraw.
      */
-    function emergencyWithdraw(address _wallet, uint256 _amount, address _token) external onlyOwner {
-        if(_wallet == address(0) || _amount == 0 || _token == address(0)) revert InvalidInput();
-        if (IERC20(_token).balanceOf(address(this)) < _amount) revert InsufficientBalance();
+    function emergencyWithdraw(
+        address _wallet,
+        uint256 _amount,
+        address _token
+    ) external onlyOwner {
+        if (_wallet == address(0) || _amount == 0 || _token == address(0))
+            revert InvalidInput();
+        if (IERC20(_token).balanceOf(address(this)) < _amount)
+            revert InsufficientBalance();
 
         IERC20(_token).safeTransfer(_wallet, _amount);
         emit EmergencyWithdraw(_wallet, _token, _amount);
@@ -458,7 +513,7 @@ contract AyniStaking is
     function pauseStaking() external onlyOwner {
         _pause();
     }
-    
+
     /**
      * @notice Unpauses the contract, allowing functions to be executed again.
      */
@@ -469,7 +524,9 @@ contract AyniStaking is
     /**
      * @dev Required function for UUPSUpgradeable to restrict upgraded to only owner.
      */
-    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {
+    function _authorizeUpgrade(
+        address newImplementation
+    ) internal override onlyOwner {
         require(newImplementation != address(0), "Invalid address");
     }
 }

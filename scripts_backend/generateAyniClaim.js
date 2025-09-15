@@ -13,17 +13,17 @@ async function main() {
     // console.log("📌 User Signer:", userSigner.address);
 
     const destinationAddress = "0x07d3bdA43236b6A6C8079d49dd2c8839Ec4a811F"
-    const stakeId = "1";
-    const interval = "1";
+    const stakeId = "4";
+    const interval = "12";
     const rewards = ethers.parseEther("5");
     const expiry = Math.floor(Date.now() / 1000) + 24 * 60 * 60;
 
-    const userId = "0x46DEDAE470378B5842098CD8E34A9A22F57F82629E4BCF52537A9578C011AC59" //make it same the id for the stake if staked against that user exists
+    const userId = "0x3f24278e735a8b2e15eebbabed9becaa9a7b81934835400ba5119aa64baa072c" //make it same the id for the stake if staked against that user exists
 
     const salt = ethers.keccak256(ethers.toUtf8Bytes("salt-" + Math.random().toString()));
     const nonce = ethers.keccak256(ethers.toUtf8Bytes("nonce-" + Math.random().toString()));
     console.log("🚀 ~ main ~ nonce:", nonce);
-    const claimedMonth = "1";
+    const claimedMonth = "12";
     const domain = {
         name: "AyniStaking",
         version: "1",
@@ -63,11 +63,10 @@ async function main() {
         ["uint256", "uint256", "uint256", "uint256" , "uint256", "bytes32", "bytes32", "bytes32"],
         [stakeId, interval, rewards, claimedMonth, expiry, userId, salt, nonce]
     );
-    console.log("Encoded Data:", encodedData);
 
     const decoded = ethers.AbiCoder.defaultAbiCoder().decode(
         ["uint256", "uint256", "uint256", "uint256", "uint256", "bytes32", "bytes32", "bytes32"],
-        encodedData
+        "0x0000000000000000000000000000000000000000000000000047f218750dfe56000000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000002b492e2fdacd30000000000000000000000000000000000000000000000000000000000000000000c0000000000000000000000000000000000000000000000000000000068c2ae72e86af614cfb2679ce187e7e85d1c11547379389e2a284bd537b78afcb789a826bd8fe458ece080f0ba5b79ed590a76dafb8eb005ee66211398a2c432730d73413b6f9e75363d44515cd9232403321431e329acaf205ab34264bb2e42698a1617"
     );
 
     console.log("Decoded stakeid:", decoded[0].toString());

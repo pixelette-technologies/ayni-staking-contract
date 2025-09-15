@@ -4,7 +4,7 @@ require("dotenv").config();
 async function main() {
     console.log("🚀 Starting process...");
 
-    const stakingAddress = "0xC8570F03FB60beDF8a6e518235eDA204D93E7196"; // replace this with the current deployed address
+    const stakingAddress = "0x867267c3095b885A95b3Dba5BA18a1566D3994bb"; // replace this with the current deployed address
     const provider = new ethers.JsonRpcProvider(process.env.BSC_MAINNET_RPC_URL); //replace this with the current rpc url
 
     const backendSigner = new ethers.Wallet(process.env.CURRENT_SIGNER, provider); // replace this with verified signer the wallet who will sign the message
@@ -17,8 +17,8 @@ async function main() {
     const destinationAddress = "0x07d3bdA43236b6A6C8079d49dd2c8839Ec4a811F"
     const sourceAddress = "0x07d3bdA43236b6A6C8079d49dd2c8839Ec4a811F"
 
-    let currentStakeId = 3;
-    let currentIntervalId = 1;
+    let currentStakeId = 1;
+    let currentIntervalId = 12;
     const expiry = Math.floor(Date.now() / 1000) + 24 * 60 * 60;
 
 
@@ -38,7 +38,8 @@ async function main() {
 
     const userId = ethers.keccak256(ethers.toUtf8Bytes(0x07d3bdA43236b6A6C8079d49dd2c8839Ec4a811F + Math.random().toString()));
     const salt = ethers.keccak256(ethers.toUtf8Bytes("salt-" + Math.random().toString()));
-    const endTime = "1757113467";
+    let endTime = Math.floor(Date.now() / 1000) + 12 * 60;
+    console.log(endTime);
 
     const domain = {
         name: "AyniStaking",
