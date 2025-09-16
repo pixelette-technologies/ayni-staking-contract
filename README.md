@@ -20,7 +20,7 @@ flowchart TD
     end
 
     subgraph Backend
-        B1[Generate EIP712 Signature<br/> + Salt + Nonce]
+        B1[Generate EIP712 Signature\n+ Salt + Nonce]
     end
 
     subgraph AyniStakingContract
@@ -28,7 +28,7 @@ flowchart TD
         S2[stakeVirtual]
         C1[claim]
         D1[stakes View Function]
-        Admin[Owner Functions<br/>Pause / EmergencyWithdraw / Upgrade]
+        Admin[Owner Functions\nPause / EmergencyWithdraw / Upgrade]
     end
 
     U1 -->|Send stake tx\nwith encodedData + signature| S1
@@ -44,7 +44,7 @@ flowchart TD
 
     S1 -->|Record Stake| D1
     S2 -->|Record Stake| D1
-    C1 -->|Transfer Rewards & Principal\n(if fully claimed)| Users
+    C1 -->|Transfer Rewards and Principal\n- if fully claimed| Users
 
     Admin --> AyniStakingContract
 
