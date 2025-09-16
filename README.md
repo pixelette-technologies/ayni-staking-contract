@@ -7,6 +7,49 @@ AyniStaking is a smart contract that enables users to stake tokens and earn rewa
 - **Virtual Staking**: Users can stake tokens through a turnkey wallet by providing a backend-signed authorization. Fees will be deducted in stakeed token equivalent to gas fees used. While at the time of function eexecution, Zero dev wallet will sponsor gas fee.
 - **Claiming Rewards**: Users can claim their staking rewards based on the backend-generated EIP712 signatures. The contract ensures that claims are authorized and prevents replay attacks using salts and nonces.
 
+## Flow Diagrams
+
+### 🔹 System Flow (Staking + Claim Overview)
+
+```mermaid
+flowchart TD
+
+    subgraph Users
+        U1[EOA Wallet] 
+        U2[Turnkey Wallet]
+    end
+
+    subgraph Backend
+        B1[Generate EIP712 Signature<br/> + Salt + Nonce]
+    end
+
+    subgraph AyniStakingContract
+        S1[stakeExternal]
+        S2[stakeVirtual]
+        C1[claim]
+        D1[stakes View Function]
+        Admin[Owner Functions<br/>Pause / EmergencyWithdraw / Upgrade]
+    end
+
+    U1 -->|Send stake tx<br/>with encodedData + signature| S1
+    U2 -->|Send stake tx<br/>with encodedData + signature| S2
+
+    B1 -->|Provides Signature| U1
+    B1 -->|Provides Signature| U2
+    B1 -->|Provides Signature| C1
+
+    S1 -->|Verify Signature<br/>+ Salt| AyniStakingContract
+    S2 -->|Verify Signature<br/>+ Salt| AyniStakingContract
+    C1 -->|Verify Signature<br/>+ Salt + Nonce| AyniStakingContract
+
+    S1 -->|Record Stake| D1
+    S2 -->|Record Stake| D1
+    C1 -->|Transfer Rewards & Principal<br/>(if fully claimed)| Users
+
+    Admin --> AyniStakingContract
+
+```
+
 ## Methods
 
 ### stakeExternal
