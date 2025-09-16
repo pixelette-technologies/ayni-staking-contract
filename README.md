@@ -31,20 +31,20 @@ flowchart TD
         Admin[Owner Functions<br/>Pause / EmergencyWithdraw / Upgrade]
     end
 
-    U1 -->|Send stake tx<br/>with encodedData + signature| S1
-    U2 -->|Send stake tx<br/>with encodedData + signature| S2
+    U1 -->|Send stake tx\nwith encodedData + signature| S1
+    U2 -->|Send stake tx\nwith encodedData + signature| S2
 
     B1 -->|Provides Signature| U1
     B1 -->|Provides Signature| U2
     B1 -->|Provides Signature| C1
 
-    S1 -->|Verify Signature<br/>+ Salt| AyniStakingContract
-    S2 -->|Verify Signature<br/>+ Salt| AyniStakingContract
-    C1 -->|Verify Signature<br/>+ Salt + Nonce| AyniStakingContract
+    S1 -->|Verify Signature\n+ Salt| AyniStakingContract
+    S2 -->|Verify Signature\n+ Salt| AyniStakingContract
+    C1 -->|Verify Signature\n+ Salt + Nonce| AyniStakingContract
 
     S1 -->|Record Stake| D1
     S2 -->|Record Stake| D1
-    C1 -->|Transfer Rewards & Principal<br/>(if fully claimed)| Users
+    C1 -->|Transfer Rewards & Principal\n(if fully claimed)| Users
 
     Admin --> AyniStakingContract
 
