@@ -13,24 +13,29 @@ AyniStaking is a smart contract that enables users to stake tokens and earn rewa
 
 ```mermaid
 flowchart TD
-
+    %% ======================
+    %% Subgraphs
+    %% ======================
     subgraph Users
-        U1[EOA Wallet] 
-        U2[Turnkey Wallet]
+        U1[EOA Wallet]:::user
+        U2[Turnkey Wallet]:::user
     end
 
     subgraph Backend
-        B1[Generate EIP712 Signature\n+ Salt + Nonce]
+        B1[Generate EIP712 Signature\n+ Salt + Nonce]:::backend
     end
 
     subgraph AyniStakingContract
-        S1[stakeExternal]
-        S2[stakeVirtual]
-        C1[claim]
-        D1[stakes View Function]
-        Admin[Owner Functions\nPause / EmergencyWithdraw / Upgrade]
+        S1[stakeExternal]:::stake
+        S2[stakeVirtual]:::stake
+        C1[claim]:::claim
+        D1[stakes View Function]:::view
+        Admin[Owner Functions\nPause / EmergencyWithdraw / Upgrade]:::admin
     end
 
+    %% ======================
+    %% Flows
+    %% ======================
     U1 -->|Send stake tx\nwith encodedData + signature| S1
     U2 -->|Send stake tx\nwith encodedData + signature| S2
 
@@ -44,9 +49,19 @@ flowchart TD
 
     S1 -->|Record Stake| D1
     S2 -->|Record Stake| D1
-    C1 -->|Transfer Rewards and Principal\n- if fully claimed| Users
+    C1 -->|Transfer Rewards and Principal\n(if fully claimed)| Users
 
     Admin --> AyniStakingContract
+
+    %% ======================
+    %% Styles
+    %% ======================
+    classDef user fill:#cce5ff,stroke:#004085,color:#000,stroke-width:2px;
+    classDef backend fill:#d4edda,stroke:#155724,color:#000,stroke-width:2px;
+    classDef stake fill:#fff3cd,stroke:#856404,color:#000,stroke-width:2px;
+    classDef claim fill:#f8d7da,stroke:#721c24,color:#000,stroke-width:2px;
+    classDef view fill:#e2e3e5,stroke:#383d41,color:#000,stroke-width:2px;
+    classDef admin fill:#d1ecf1,stroke:#0c5460,color:#000,stroke-width:2px;
 
 ```
 
