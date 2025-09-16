@@ -41,7 +41,7 @@ contract AyniStaking is
 
     bytes32 private constant STAKEVIRTUAL_TYPEHASH =
         keccak256(
-            "StakeVirtual(address destinationAddress,address sourceAddress,uint256 stakeId,uint256 interval,uint256 endTime,uint256 amount,uint256 feeTokens,uint256 expiry,bytes32 userId,bytes32 salt)"
+            "StakeVirtual(address sourceAddress,uint256 stakeId,uint256 interval,uint256 endTime,uint256 amount,uint256 feeTokens,uint256 expiry,bytes32 userId,bytes32 salt)"
         );
 
     bytes32 private constant CLAIM_TYPEHASH =
@@ -243,7 +243,6 @@ contract AyniStaking is
      * @dev Uses EIP712 typed data signatures to verify off-chain authorization.
      *      Prevents replay attacks using unique salts and ensures the stake does not already exist.
      * @param _encodedData ABI-encoded data containing:
-     *        - destinationAddress: A turnkey address where rewards will be claimed
      *        - sourceAddress: address from which tokens will be staked
      *        - stakeId: unique identifier for this stake
      *        - interval: staking interval in months (e.g., 12 for 12 months)
@@ -260,7 +259,6 @@ contract AyniStaking is
         bytes memory _signature
     ) external nonReentrant whenNotPaused {
         (
-            address destinationAddress,
             address sourceAddress,
             uint256 stakeId,
             uint256 interval,
@@ -274,7 +272,6 @@ contract AyniStaking is
                 _encodedData,
                 (
                     address,
-                    address,
                     uint256,
                     uint256,
                     uint256,
@@ -287,7 +284,6 @@ contract AyniStaking is
             );
 
         if (
-            destinationAddress == address(0) ||
             sourceAddress == address(0) ||
             amount == 0 ||
             feeTokens == 0 ||
@@ -300,7 +296,6 @@ contract AyniStaking is
             keccak256(
                 abi.encode(
                     STAKEVIRTUAL_TYPEHASH,
-                    destinationAddress,
                     sourceAddress,
                     stakeId,
                     interval,
@@ -330,7 +325,7 @@ contract AyniStaking is
             staker: sourceAddress,
             claimedAmount: 0,
             claimedUntilMonth: 0,
-            claimAddress: destinationAddress,
+            claimAddress: sourceAddress,
             isClaimed: false,
             isActive: true
         });
@@ -341,7 +336,7 @@ contract AyniStaking is
 
         emit Staked(
             sourceAddress,
-            destinationAddress,
+            sourceAddress,
             userId,
             stakeId,
             interval,
@@ -395,8 +390,12 @@ contract AyniStaking is
                 )
             ); //should there be addresses sent from backnemd at the time of claim
 
-        if (rewards == 0 || expiry == 0 || claimedMonth == 0)
-            revert InvalidInput();
+        if (
+            destinationAddress == address(0) ||
+            rewards == 0 ||
+            expiry == 0 ||
+            claimedMonth == 0
+        ) revert InvalidInput();
         if (usedSalts[salt]) revert SaltAlreadyUsed();
         if (usedNonces[userId][stakeId][nonce]) revert NonceAlreadyUsed();
 
