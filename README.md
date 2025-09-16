@@ -49,7 +49,7 @@ flowchart TD
 
     S1 -->|Record Stake| D1
     S2 -->|Record Stake| D1
-    C1 -->|Transfer Rewards and Principal\n(if fully claimed)| Users
+    C1 -->|Transfer Rewards and Principal\n - if fully claimed| Users
 
     Admin --> AyniStakingContract
 
