@@ -99,8 +99,6 @@ contract AyniStaking is
     );
 
     // Custom errors
-    error InvalidSignature();
-    error TransferFailed();
     error InvalidInput();
     error InvalidSigner();
     error AlreadyClaimed();
@@ -108,13 +106,10 @@ contract AyniStaking is
     error NotMatured();
     error SaltAlreadyUsed();
     error InvalidClaimAddress();
-    error InvalidStakeAddress();
-    error InvalidAddress();
     error AlreadyStaked();
     error SignatureExpired();
     error StakeAlreadyExists();
     error NonceAlreadyUsed();
-    error PreclaimNotMatured();
     error InsufficientBalance();
 
     function initialize(
