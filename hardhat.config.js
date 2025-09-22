@@ -1,5 +1,6 @@
 require("@nomicfoundation/hardhat-toolbox");
-require("@openzeppelin/hardhat-upgrades")
+require("@openzeppelin/hardhat-upgrades");
+require('@primitivefi/hardhat-dodoc');
 require('dotenv').config();
 
 /** @type import('hardhat/config').HardhatUserConfig */
@@ -12,6 +13,13 @@ module.exports = {
         runs: 200,
       },
     },
+  },
+
+  dodoc: {
+    runOnCompile: false,
+    debugMode: false,
+    exclude: ['@openzeppelin/contracts-upgradeable'],
+    outputDir: './docs',
   },
 
   etherscan: {

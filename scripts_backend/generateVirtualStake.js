@@ -4,7 +4,7 @@ require("dotenv").config();
 async function main() {
     console.log("🚀 Starting process...");
 
-    const stakingAddress = "0x867267c3095b885A95b3Dba5BA18a1566D3994bb"; // replace this with the current deployed address
+    const stakingAddress = "0x712b09317761fa07B69033D978D3A41F0ef72d70"; // replace this with the current deployed address
     const provider = new ethers.JsonRpcProvider("process.env.BSC_MAINNET_RPC_URL"); //replace this with the current rpc url
 
     const backendSigner = new ethers.Wallet(process.env.CURRENT_SIGNER, provider); // replace this with verified signer the wallet who will sign the message
@@ -59,15 +59,16 @@ async function main() {
     }
 
     const encodedData = ethers.AbiCoder.defaultAbiCoder().encode(
-        ["uint256", "uint256", "uint256", "uint256", "uint256", "uint256", "bytes32", "bytes32"],
-        [stakeId, interval, endTime, amount, feeTokens, expiry, userId, salt]
+        ["address", "uint256", "uint256", "uint256", "uint256", "uint256", "uint256", "bytes32", "bytes32"],
+        [sourceAddress, stakeId, interval, endTime, amount, feeTokens, expiry, userId, salt]
     )
     console.log("Encoded Data:", encodedData);
 
     const decoded = ethers.AbiCoder.defaultAbiCoder().decode(
-        ["uint256", "uint256", "uint256", "uint256", "uint256", "uint256", "bytes32", "bytes32"],
+        ["address", "uint256", "uint256", "uint256", "uint256", "uint256", "uint256", "bytes32", "bytes32"],
         encodedData
     );
+
     console.log("Decoded Interval:", decoded[1].toString());
     console.log("Decoded amount:", decoded[0].toString());
     console.log("Decoded id:", decoded[2].toString());

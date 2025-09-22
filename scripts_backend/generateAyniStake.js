@@ -4,7 +4,7 @@ require("dotenv").config();
 async function main() {
     console.log("🚀 Starting process...");
 
-    const stakingAddress = "0x867267c3095b885A95b3Dba5BA18a1566D3994bb"; // replace this with the current deployed address
+    const stakingAddress = "0x712b09317761fa07B69033D978D3A41F0ef72d70"; // replace this with the current deployed address
     const provider = new ethers.JsonRpcProvider(process.env.BSC_MAINNET_RPC_URL); //replace this with the current rpc url
 
     const backendSigner = new ethers.Wallet(process.env.CURRENT_SIGNER, provider); // replace this with verified signer the wallet who will sign the message
@@ -33,7 +33,7 @@ async function main() {
     }
     const stakeId = getNextStakeId();
     console.log("🚀 ~ main ~ stakeId:", stakeId);
-    const interval= getNextIntervalId();
+    const interval = getNextIntervalId();
     console.log("🚀 ~ main ~ intervalId:", interval);
 
     const userId = ethers.keccak256(ethers.toUtf8Bytes(0x07d3bdA43236b6A6C8079d49dd2c8839Ec4a811F + Math.random().toString()));
