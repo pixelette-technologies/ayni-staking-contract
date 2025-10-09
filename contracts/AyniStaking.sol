@@ -98,12 +98,19 @@ contract AyniStaking is
         uint256 amount
     );
 
+    event SignerAdded(address indexed signer, address indexed addedBy);
+    event SignerRemoved(address indexed signer, address indexed removedBy);
+
+    event FeeCollectorUpdated(
+        address indexed newCollector,
+        address indexed updatedBy
+    );
+
     // Custom errors
     error InvalidInput();
     error InvalidSigner();
     error AlreadyClaimed();
     error StakeNotFound();
-    error NotMatured();
     error SaltAlreadyUsed();
     error InvalidClaimAddress();
     error AlreadyStaked();
@@ -144,6 +151,7 @@ contract AyniStaking is
      *        - endTime: timestamp when the stake fully mature.
      *        - interval: staking interval in months (e.g., 12 for 12 months)
      *        - amount: amount of tokens to stake
+     *        - expiry: signature expiry timestamp
      *        - userId: unique user identifier from backend
      *        - salt: unique salt to prevent replay
      * @param _signature Backend-generated EIP712 signature authorizing the stake.
@@ -183,8 +191,10 @@ contract AyniStaking is
             expiry == 0 ||
             interval == 0
         ) revert InvalidInput();
+
         if (usedSalts[salt]) revert SaltAlreadyUsed();
         if (stakes[userId][interval][stakeId].isActive) revert AlreadyStaked();
+        if (stakes[userId][interval][stakeId].isClaimed) revert AlreadyStaked();
 
         bytes32 digest = _hashTypedDataV4(
             keccak256(
@@ -244,6 +254,7 @@ contract AyniStaking is
      *        - endTime: timestamp when the stake fully mature.
      *        - amount: amount of tokens to stake
      *        - feeTokens: amount of tokens to be deducted as gas fee
+     *        - expiry: signature expiry timestamp
      *        - userId: unique user identifier from backend
      *        - salt: unique salt to prevent replay
      * @param _signature Backend-generated EIP712 signature authorizing the stake.
@@ -280,6 +291,7 @@ contract AyniStaking is
 
         if (
             sourceAddress == address(0) ||
+            endTime == 0 ||
             amount == 0 ||
             feeTokens == 0 ||
             interval == 0 ||
@@ -311,6 +323,8 @@ contract AyniStaking is
         if (expiry < block.timestamp) revert SignatureExpired();
 
         if (stakes[userId][interval][stakeId].isActive)
+            revert StakeAlreadyExists();
+        if (stakes[userId][interval][stakeId].isClaimed)
             revert StakeAlreadyExists();
 
         stakes[userId][interval][stakeId] = Stake({
@@ -345,6 +359,7 @@ contract AyniStaking is
      *      Uses salts and nonces to prevent replay attacks.
      *      Transfers preclaim rewards in `rewardToken` and returns principal if the stake is fully claimed.
      * @param _encodedData ABI-encoded data containing:
+     *        - destinationAddress: A turnkey address where rewards will be claimed
      *        - stakeId: unique identifier of the stake
      *        - interval: staking interval in months (e.g., 12 for 12 months)
      *        - rewards: amount of reward tokens to claim
@@ -423,6 +438,8 @@ contract AyniStaking is
         if (userStake.claimAddress != destinationAddress)
             revert InvalidClaimAddress();
         if (userStake.isClaimed) revert AlreadyClaimed();
+        if (userStake.claimedUntilMonth >= claimedMonth)
+            revert AlreadyClaimed();
         if (!userStake.isActive) revert StakeNotFound();
 
         userStake.claimedUntilMonth = claimedMonth;
@@ -451,33 +468,41 @@ contract AyniStaking is
     /**
      * @notice Adds a backend signer. Only callable by the contract owner.
      * @param _signer Address of the signer to be added.
+     * @notice Emits a {SignerAdded} event after successful update.
      */
     function addSigner(address _signer) external onlyOwner {
         if (_signer == address(0)) revert InvalidInput();
+        if (isSigner[_signer]) revert InvalidInput();
 
         isSigner[_signer] = true;
+
+        emit SignerAdded(_signer, msg.sender);
     }
 
     /**
      * @notice Removes a backend signer. Only callable by the contract owner.
      * @param _signer Address of the signer to be removed.
+     * @notice Emits a {SignerRemoved} event after successful update.
      */
     function removeSigner(address _signer) external onlyOwner {
         if (_signer == address(0)) revert InvalidInput();
         if (!isSigner[_signer]) revert InvalidInput();
 
         isSigner[_signer] = false;
+        emit SignerRemoved(_signer, msg.sender);
     }
 
     /**
      * @notice Updates the address that collects staking fees.
      * @dev Only callable by the contract owner.
      *      Reverts if the provided address is the zero address.
+     *      Emits a {FeeCollectorUpdated} event after successful update.
      * @param _feeCollector The new address to receive staking fees.
      */
     function setFeeCollector(address _feeCollector) external onlyOwner {
         if (_feeCollector == address(0)) revert InvalidInput();
         feeCollector = _feeCollector;
+        emit FeeCollectorUpdated(_feeCollector, msg.sender);
     }
 
     /**
