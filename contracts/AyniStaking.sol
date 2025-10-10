@@ -46,7 +46,7 @@ contract AyniStaking is
 
     bytes32 private constant CLAIM_TYPEHASH =
         keccak256(
-            "Claim(address destinationAddress,uint256 stakeId,uint256 interval,uint256 rewards,uint256 claimedMonth,uint256 expiry,bytes32 salt,bytes32 userId,bytes32 nonce)"
+            "Claim(address destinationAddress,uint256 stakeId,uint256 interval,uint256 rewards,uint256 claimedMonth,uint256 expiry,bytes32 salt,bytes32 userId)"
         );
 
     IERC20 public stakingToken;
@@ -57,8 +57,6 @@ contract AyniStaking is
         public stakes;
     mapping(address => bool) public isSigner;
     mapping(bytes32 => bool) public usedSalts;
-    mapping(bytes32 => mapping(uint256 => mapping(bytes32 => bool)))
-        public usedNonces;
 
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor() {
@@ -116,7 +114,6 @@ contract AyniStaking is
     error AlreadyStaked();
     error SignatureExpired();
     error StakeAlreadyExists();
-    error NonceAlreadyUsed();
     error InsufficientBalance();
 
     function initialize(
@@ -356,7 +353,7 @@ contract AyniStaking is
     /**
      * @notice Allows a user to claim their staking rewards for a specific stake via destinationAddress.
      * @dev Verifies backend-generated EIP712 signature to ensure authorized claims.
-     *      Uses salts and nonces to prevent replay attacks.
+     *      Uses salt to prevent replay attacks.
      *      Transfers preclaim rewards in `rewardToken` and returns principal if the stake is fully claimed.
      * @param _encodedData ABI-encoded data containing:
      *        - destinationAddress: A turnkey address where rewards will be claimed
@@ -367,7 +364,6 @@ contract AyniStaking is
      *        - expiry: signature expiry timestamp
      *        - userId: unique user identifier
      *        - salt: unique salt to prevent replay attacks
-     *        - nonce: unique nonce for additional replay protection
      * @param _signature Backend-generated EIP712 signature authorizing the claim.
      * @notice Emits a {Claimed} event after successful reward claim.
      */
@@ -383,8 +379,7 @@ contract AyniStaking is
             uint256 claimedMonth,
             uint256 expiry,
             bytes32 userId,
-            bytes32 salt,
-            bytes32 nonce
+            bytes32 salt
         ) = abi.decode(
                 _encodedData,
                 (
@@ -395,10 +390,9 @@ contract AyniStaking is
                     uint256,
                     uint256,
                     bytes32,
-                    bytes32,
                     bytes32
                 )
-            ); //should there be addresses sent from backnemd at the time of claim
+            );
 
         if (
             destinationAddress == address(0) ||
@@ -407,7 +401,6 @@ contract AyniStaking is
             claimedMonth == 0
         ) revert InvalidInput();
         if (usedSalts[salt]) revert SaltAlreadyUsed();
-        if (usedNonces[userId][stakeId][nonce]) revert NonceAlreadyUsed();
 
         bytes32 digest = _hashTypedDataV4(
             keccak256(
@@ -420,14 +413,12 @@ contract AyniStaking is
                     claimedMonth,
                     expiry,
                     salt,
-                    userId,
-                    nonce
+                    userId
                 )
             )
         );
 
         usedSalts[salt] = true;
-        usedNonces[userId][stakeId][nonce] = true;
 
         address signer = ECDSA.recover(digest, _signature);
         if (!isSigner[signer]) revert InvalidSigner();
