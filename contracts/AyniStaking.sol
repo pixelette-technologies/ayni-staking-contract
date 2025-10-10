@@ -85,7 +85,7 @@ contract AyniStaking is
         bytes32 indexed userId,
         uint256 stakeId,
         uint256 interval,
-        uint256 lastPreclaimMonth,
+        uint256 lastClaimedMonth,
         uint256 reward,
         uint256 principal
     );
@@ -111,7 +111,6 @@ contract AyniStaking is
     error StakeNotFound();
     error SaltAlreadyUsed();
     error InvalidClaimAddress();
-    error AlreadyStaked();
     error SignatureExpired();
     error StakeAlreadyExists();
     error InsufficientBalance();
@@ -190,8 +189,10 @@ contract AyniStaking is
         ) revert InvalidInput();
 
         if (usedSalts[salt]) revert SaltAlreadyUsed();
-        if (stakes[userId][interval][stakeId].isActive) revert AlreadyStaked();
-        if (stakes[userId][interval][stakeId].isClaimed) revert AlreadyStaked();
+        if (
+            stakes[userId][interval][stakeId].isActive ||
+            stakes[userId][interval][stakeId].isClaimed
+        ) revert StakeAlreadyExists();
 
         bytes32 digest = _hashTypedDataV4(
             keccak256(
@@ -319,10 +320,10 @@ contract AyniStaking is
         if (!isSigner[signer]) revert InvalidSigner();
         if (expiry < block.timestamp) revert SignatureExpired();
 
-        if (stakes[userId][interval][stakeId].isActive)
-            revert StakeAlreadyExists();
-        if (stakes[userId][interval][stakeId].isClaimed)
-            revert StakeAlreadyExists();
+        if (
+            stakes[userId][interval][stakeId].isActive ||
+            stakes[userId][interval][stakeId].isClaimed
+        ) revert StakeAlreadyExists();
 
         stakes[userId][interval][stakeId] = Stake({
             amount: amount,
