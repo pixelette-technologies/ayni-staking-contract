@@ -12,14 +12,6 @@ const DOMAIN = (contract, chainId) => {
     };
 };
 
-const getParams = async () => {
-    const userId = ethers.keccak256(ethers.toUtf8Bytes(Date.now().toString() + Math.random().toString()));
-    const salt = ethers.keccak256(ethers.toUtf8Bytes("salt-" + Math.random().toString()));
-    const expiry = Math.floor(Date.now() / 1000) + 24 * 60 * 60;
-
-    return { userId, salt, expiry };
-}
-
 const STAKE_EXTERNAL_TYPE = [
     { name: "destinationAddress", type: "address" },
     { name: "sourceAddress", type: "address" },
@@ -52,8 +44,7 @@ const CLAIM_TYPE = [
     { name: "claimedMonth", type: "uint256" },
     { name: "expiry", type: "uint256" },
     { name: "salt", type: "bytes32" },
-    { name: "userId", type: "bytes32" },
-    { name: "nonce", type: "bytes32" },
+    { name: "userId", type: "bytes32" }
 ];
 
 async function getSignedExternalStakeData({
@@ -196,10 +187,6 @@ async function getSignedClaimData({
         );
     }
 
-    const nonce = ethers.keccak256(
-        ethers.toUtf8Bytes("salt-" + Math.random().toString())
-    );
-
     const data = {
         destinationAddress: sourceAddress,
         stakeId,
@@ -208,15 +195,14 @@ async function getSignedClaimData({
         claimedMonth: prclaimMonth,
         expiry,
         salt,
-        userId,
-        nonce
+        userId
     };
 
     const claimSignature = await signer.signTypedData(domain, { Claim: CLAIM_TYPE }, data);
 
     const claimEncodedData = ethers.AbiCoder.defaultAbiCoder().encode(
-        ["address", "uint256", "uint256", "uint256", "uint256", "uint256", "bytes32", "bytes32", "bytes32"],
-        [sourceAddress, stakeId, interval, rewards, prclaimMonth, expiry, userId, salt, nonce]
+        ["address", "uint256", "uint256", "uint256", "uint256", "uint256", "bytes32", "bytes32"],
+        [sourceAddress, stakeId, interval, rewards, prclaimMonth, expiry, userId, salt]
     );
 
     return {
