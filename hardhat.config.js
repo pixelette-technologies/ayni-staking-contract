@@ -27,6 +27,14 @@ module.exports = {
     apiKey: process.env.MAINNET_BSCSCAN_API_KEY,
     customChains: [
       {
+        network: "mainnet",
+        chainId: 1,
+        urls: {
+          apiURL: "https://api.etherscan.io/v2/api?chainid=1",
+          browserURL: "https://etherscan.com",
+        },
+      },
+      {
         network: "bsc",
         chainId: 56,
         urls: {
@@ -45,11 +53,16 @@ module.exports = {
     ],
   },
 
-  defaultNetwork: "bsc",
+  defaultNetwork: "mainnet",
 
   networks: {
     hardhat: {
       chainId: 31337
+    },
+    mainnet: {
+      url: process.env.MAINNET_RPC_URL,
+      chainId: 1,
+      accounts: [process.env.PRIVATE_KEY]
     },
     bscTestnet: {
       url: process.env.BSC_TESTNET_RPC_URL,
