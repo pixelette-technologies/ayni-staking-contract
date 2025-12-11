@@ -90,6 +90,22 @@ contract AyniStaking is
         uint256 principal
     );
 
+    event StakeRemoved(
+        bytes32 indexed userId,
+        uint256 indexed stakeId,
+        uint256 interval,
+        address staker,
+        uint256 principalReturned
+    );
+
+    event StakeWalletUpdated(
+        bytes32 indexed userId,
+        uint256 indexed stakeId,
+        uint256 interval,
+        address indexed previousWallet,
+        address newWallet
+    );
+
     event EmergencyWithdraw(
         address indexed wallet,
         address token,
@@ -454,6 +470,76 @@ contract AyniStaking is
             claimedMonth,
             rewards,
             userStake.amount
+        );
+    }
+
+    /**
+     * @notice Allows the owner to forcibly remove a stake and return principal.
+     * @dev Rewards are not paid and the stake becomes ineligible for future claims.
+     * @param userId Backend user identifier.
+     * @param interval Staking interval in months.
+     * @param stakeId Unique identifier of the stake.
+     */
+    function forceRemoveStake(
+        bytes32 userId,
+        uint256 interval,
+        uint256 stakeId
+    ) external onlyOwner nonReentrant {
+        Stake storage userStake = stakes[userId][interval][stakeId];
+        if (!userStake.isActive) revert StakeNotFound();
+
+        uint256 principal = userStake.amount;
+        address stakerAddress = userStake.staker;
+
+        userStake.isActive = false;
+        userStake.isClaimed = true;
+        userStake.claimedUntilMonth = interval;
+        userStake.amount = 0;
+
+        stakingToken.safeTransfer(stakerAddress, principal);
+
+        emit StakeRemoved(
+            userId,
+            stakeId,
+            interval,
+            stakerAddress,
+            principal
+        );
+    }
+
+    /**
+     * @notice Allows the owner to migrate the staking wallet to a new address.
+     * @dev Only the staker address is updated; claimAddress remains unchanged.
+     * @param userId Backend user identifier.
+     * @param interval Staking interval in months.
+     * @param stakeId Unique identifier of the stake.
+     * @param currentWallet Wallet currently recorded for the stake.
+     * @param newWallet Wallet to receive staking ownership and future rewards.
+     */
+    function updateStakeWallet(
+        bytes32 userId,
+        uint256 interval,
+        uint256 stakeId,
+        address currentWallet,
+        address newWallet
+    ) external onlyOwner {
+        if (newWallet == address(0) || currentWallet == address(0))
+            revert InvalidInput();
+
+        Stake storage userStake = stakes[userId][interval][stakeId];
+        if (!userStake.isActive) revert StakeNotFound();
+        if (
+            userStake.staker != currentWallet
+        ) revert InvalidInput();
+
+        userStake.staker = newWallet;
+
+        emit StakeWalletUpdated(
+            userId,
+            stakeId,
+            interval,
+            currentWallet,
+            newWallet
         );
     }
 

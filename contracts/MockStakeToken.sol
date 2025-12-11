@@ -4,7 +4,7 @@ pragma solidity 0.8.28;
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 contract MockStakeToken is ERC20 {
-    constructor() ERC20("StakingMToken", "SM") {
+    constructor() ERC20("TestStakeToken", "TST") {
         _mint(msg.sender, 10000000 * 10 ** 18);
     }
 

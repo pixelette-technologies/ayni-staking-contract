@@ -22,11 +22,27 @@ module.exports = {
     outputDir: './docs',
   },
 
+  // Etherscan API v2 (single key, multichain)
   etherscan: {
-    apiKey: {
-      bscTestnet: process.env.TESTNET_BSCSCAN_API_KEY,
-      bsc: process.env.MAINNET_BSCSCAN_API_KEY,
-    }
+    apiKey: process.env.MAINNET_BSCSCAN_API_KEY,
+    customChains: [
+      {
+        network: "bsc",
+        chainId: 56,
+        urls: {
+          apiURL: "https://api.etherscan.io/v2/api?chainid=56",
+          browserURL: "https://bscscan.com",
+        },
+      },
+      {
+        network: "bscTestnet",
+        chainId: 97,
+        urls: {
+          apiURL: "https://api.etherscan.io/v2/api",
+          browserURL: "https://testnet.bscscan.com",
+        },
+      },
+    ],
   },
 
   defaultNetwork: "bsc",
@@ -41,7 +57,7 @@ module.exports = {
       accounts: [process.env.PRIVATE_KEY]
     },
     bsc: {
-      url: "https://bsc.drpc.org",
+      url: process.env.BSC_MAINNET_RPC_URL,
       chainId: 56,
       accounts: [process.env.PRIVATE_KEY]
     }
