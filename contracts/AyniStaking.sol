@@ -32,6 +32,7 @@ contract AyniStaking is
         address claimAddress;
         bool isClaimed;
         bool isActive;
+        bool isAdminCancelled;
     }
 
     bytes32 private constant STAKEEXTERNAL_TYPEHASH =
@@ -242,7 +243,8 @@ contract AyniStaking is
             staker: msg.sender,
             claimAddress: destinationAddress,
             isClaimed: false,
-            isActive: true
+            isActive: true,
+            isAdminCancelled: false
         });
 
         stakingToken.safeTransferFrom(msg.sender, address(this), amount);
@@ -350,7 +352,8 @@ contract AyniStaking is
             claimedUntilMonth: 0,
             claimAddress: sourceAddress,
             isClaimed: false,
-            isActive: true
+            isActive: true,
+            isAdminCancelled: false
         });
 
         stakingToken.safeTransferFrom(sourceAddress, feeCollector, feeTokens);
@@ -493,6 +496,7 @@ contract AyniStaking is
 
         userStake.isActive = false;
         userStake.isClaimed = true;
+        userStake.isAdminCancelled = true;
         userStake.claimedUntilMonth = interval;
         userStake.amount = 0;
 

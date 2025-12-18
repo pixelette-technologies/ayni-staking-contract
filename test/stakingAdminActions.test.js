@@ -54,6 +54,7 @@ describe("AyniStaking: admin actions", () => {
         expect(stakeData.isActive).to.equal(false);
         expect(stakeData.isClaimed).to.equal(true);
         expect(stakeData.claimedUntilMonth).to.equal(interval);
+        expect(stakeData.isAdminCancelled).to.equal(true);
 
         const rewardAmount = ethers.parseEther("1");
         const { claimSignature, claimEncodedData } = await getSignedClaimData({
